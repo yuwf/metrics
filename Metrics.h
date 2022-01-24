@@ -1,6 +1,22 @@
 ﻿#ifndef _METRICS_H_
 #define _METRICS_H_
 
+// by yuwf qingting.water@gmail.com
+
+/* 使用案例
+
+将数据添加到记录中，使用 g_metricsrecord.Snapshot() 获取格式化的快照数据
+Measure("metricsname").Tag("tag", 12).Add(1);
+Measure("metricsname").Tag("tag", "id").Set(10);
+Measure("metricsname").Tag("tag", "max").Max(10);
+
+直接获取格式化的快照数据
+std::string str = Measure("metricsname").Tag("tag", 12).Snapshot(1);
+std::string str = Measure("metricsname").Tag("tag", "id").Snapshot(10);
+std::string str = Measure("metricsname").Tag("tag", "max").Snapshot(10);
+
+*/
+
 #include <string>
 #include <map>
 #include <iosfwd>
@@ -51,7 +67,8 @@ typedef std::unordered_map<MetricsKey, MetricsValue, MetricsKeyHash> MetricsMap;
 
 
 // 测量工具 生成指标
-// 为了效率 不检查TagKey和TagValue中有 ",空格,{,} 等特殊格式的存在
+// 为了效率 不检查TagKey和TagValue中特殊格式的存在 如 空格'",{}:
+// 需要外部使用者自己防范，否则会出现格式错误
 class Measure
 {
 public:
@@ -102,7 +119,7 @@ class MetricsRecord
 public:
 	void Add(const Measure& measure, MeasureOp op, int64_t v);
 
-	// 获取指标数据 并清除保留的数据
+	// 获取指标数据
 	std::string Snapshot();
 
 	void SetRecord(bool b) { brecord = b; }
