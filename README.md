@@ -7,6 +7,11 @@
 Measure("metricsname").Tag("tag", 12).Add(1);
 Measure("metricsname").Tag("tag", "id").Set(10);
 Measure("metricsname").Tag("tag", "max").Max(10);
+
+下面这个中方式效率非常高，可以考虑在热点地方使用，提高性能
+Metrics* pMetrics = Measure("metricsname").Tag("tag", 12).Reg(); // pMetrics对象保存下来，在其他地方使用
+pMetrics->Add(1);
+
 ```
 ## 直接获取格式化的快照数据
 ```
