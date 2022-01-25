@@ -10,8 +10,9 @@ Measure("metricsname").Tag("tag", 12).Add(1);
 Measure("metricsname").Tag("tag", "id").Set(10);
 Measure("metricsname").Tag("tag", "max").Max(10);
 
-下面这个中方式效率非常高，可以考虑在热点地方使用，提高性能
-Metrics* pMetrics = Measure("metricsname").Tag("tag", 12).Reg(); // pMetrics对象保存下来，在其他地方使用
+下面这个中方式效率非常高，可以考虑在热点地方使用，提高性能，要求metricsname和tags都是固定的
+Metrics* pMetrics = Measure("metricsname").Tag("tag", "name").Reg();		// pMetrics对象保存下来，在其他地方使用
+static Metrics* pMetrics = Measure("metricsname").Tag("tag", "name").Reg();	// 用静态的方式保存pMetrics
 pMetrics->Add(1);
 
 
@@ -79,7 +80,7 @@ typedef std::unordered_map<MetricsKey, Metrics*, MetricsKeyHash> MetricsMap;
 
 
 // 测量工具 生成指标
-// 为了效率 不检查Tag中特殊格式的存在 如 空格 ' " , { } \0
+// 为了效率 不检查Tag中特殊字符的存在 如 空格 ' " , { } \0
 // 需要外部使用者自己防范，否则会出现格式错误，尤其是空格
 class Measure
 {
