@@ -3,8 +3,6 @@
 #include <regex>
 #include <iosfwd>
 
-MetricsRecord g_metricsrecord;
-
 Measure::Measure(const std::string& metricsname)
 {
 	Write(metricsname.data(), metricsname.length());
@@ -201,6 +199,8 @@ static unsigned int APHash(char *str)
 	return (hash & 0x7FFFFFFF);
 }
 
+MetricsRecord g_metricsrecord;
+
 Metrics* MetricsRecord::Reg(const Measure& measure)
 {
 	if (!brecord)
@@ -215,7 +215,7 @@ Metrics* MetricsRecord::Reg(const Measure& measure)
 	// 先用共享锁 如果存在直接返回
 	{
 		boost::shared_lock<boost::shared_mutex> lock(mutex);
-		auto it = records.find(key);
+		auto it = ((const MetricsMap&)records).find(key); // 显示的调用const的find
 		if (it != records.end())
 		{
 			return it->second;
