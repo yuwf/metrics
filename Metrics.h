@@ -93,8 +93,10 @@ public:
 	enum OpType { OpAdd, OpSet, OpMax, };
 
 	Measure& Tag(const char* name, const char* value);
+	Measure& Tag(const char* name, const std::string& value);
 	Measure& Tag(const char* name, int value);
 	Measure& Tag(const char* name, int64_t value);
+	Measure& Tag(const std::string& name, const char* value);
 	Measure& Tag(const std::string& name, const std::string& value);
 	Measure& Tag(const std::string& name, int value);
 	Measure& Tag(const std::string& name, int64_t value);
@@ -111,8 +113,9 @@ public:
 	std::string Snapshot(int64_t v, SnapshotType type);
 protected:
 	friend class MetricsRecord;
-	char* buff = NULL;
-	int size = 0;
+	char fix_buff[128] = { 0 };
+	char* buff = fix_buff;
+	int size = 128;
 	int curpos = 0;
 
 	void Write(void const* data, int len);
@@ -130,7 +133,8 @@ public:
 	Metrics* Reg(const Measure& measure);
 
 	// 获取指标数据
-	std::string Snapshot(Measure::SnapshotType type);
+	// tags额外添加的标签
+	std::string Snapshot(Measure::SnapshotType type, const std::map<std::string, std::string>& tags = std::map<std::string, std::string>());
 
 	void SetRecord(bool b) { brecord = b; }
 

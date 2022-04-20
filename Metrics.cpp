@@ -15,7 +15,7 @@ Measure::Measure(const char* metricsname)
 
 Measure::~Measure()
 {
-	if (buff != NULL)
+	if (buff != fix_buff)
 	{
 		delete[] buff;
 	}
@@ -30,6 +30,15 @@ Measure& Measure::Tag(const char* name, const char* value)
 	return *this;
 }
 
+Measure& Measure::Tag(const char* name, const std::string& value)
+{
+	Write(" ", 1);
+	Write(name, strlen(name));
+	Write(" ", 1);
+	Write(value.data(), value.length());
+	return *this;
+}
+
 Measure& Measure::Tag(const char* name, int value)
 {
 	return Tag(name, std::to_string(value).c_str());
@@ -38,6 +47,15 @@ Measure& Measure::Tag(const char* name, int value)
 Measure& Measure::Tag(const char* name, int64_t value)
 {
 	return Tag(name, std::to_string(value).c_str());
+}
+
+Measure& Measure::Tag(const std::string& name, const char* value)
+{
+	Write(" ", 1);
+	Write(name.data(), name.length());
+	Write(" ", 1);
+	Write(value, strlen(value));
+	return *this;
 }
 
 Measure& Measure::Tag(const std::string& name, const std::string& value)
@@ -147,17 +165,18 @@ void Measure::Write(void const* data, int len)
 	{
 		return;
 	}
-	const static int buff_size = 128;
-
+	
+	// 判断buff长度是否充足
 	if ((curpos + len) > size - 1) // 这里-1用来控制最后一个字符为\0 直接可以当做字符串来使用
 	{
+		const static int buff_size = 128;
 		size = buff_size*((curpos + len) / buff_size + 1);
 		char* p = new char[size];
 		memset(p, 0, size);
+		memcpy(p, buff, curpos);
 
-		if (buff)
+		if (buff != fix_buff)
 		{
-			memcpy(p, buff, curpos);
 			delete[] buff;
 		}
 		buff = p;
@@ -216,7 +235,7 @@ Metrics* MetricsRecord::Reg(const Measure& measure)
 	{
 		boost::shared_lock<boost::shared_mutex> lock(mutex);
 		auto it = ((const MetricsMap&)records).find(key); // 显示的调用const的find
-		if (it != records.end())
+		if (it != records.cend())
 		{
 			return it->second;
 		}
@@ -244,7 +263,7 @@ Metrics* MetricsRecord::Reg(const Measure& measure)
 	return p;
 }
 
-std::string MetricsRecord::Snapshot(Measure::SnapshotType type)
+std::string MetricsRecord::Snapshot(Measure::SnapshotType type, const std::map<std::string, std::string>& tags)
 {
 	MetricsMap lastdata;
 	{
@@ -265,6 +284,10 @@ std::string MetricsRecord::Snapshot(Measure::SnapshotType type)
 			{
 				ss << "\"" << t.first << "\":\"" << t.second << "\",";
 			}
+			for (const auto& t : tags)
+			{
+				ss << "\"" << t.first << "\":\"" << t.second << "\",";
+			}
 			ss << "\"value\":" << it.second->value << "";
 			ss << "}";
 		}
@@ -276,6 +299,10 @@ std::string MetricsRecord::Snapshot(Measure::SnapshotType type)
 		{
 			ss << it.second->name;
 			for (const auto& t : it.second->tags)
+			{
+				ss << "," << t.first << "=" << t.second;
+			}
+			for (const auto& t : tags)
 			{
 				ss << "," << t.first << "=" << t.second;
 			}
@@ -292,6 +319,11 @@ std::string MetricsRecord::Snapshot(Measure::SnapshotType type)
 				ss << "{";
 				int index = 0;
 				for (const auto& t : it.second->tags)
+				{
+					ss << ((++index) == 1 ? "" : ",");
+					ss << t.first << "=\"" << t.second << "\"";
+				}
+				for (const auto& t : tags)
 				{
 					ss << ((++index) == 1 ? "" : ",");
 					ss << t.first << "=\"" << t.second << "\"";
