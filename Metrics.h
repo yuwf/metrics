@@ -26,9 +26,16 @@ std::string str = Measure("metricsname").Tag("tag", "max").Snapshot(10, Measure:
 #include <string>
 #include <map>
 #include <unordered_map>
+#include <atomic>
+
+#if __cplusplus >= 201703L || _MSVC_LANG >= 201402L
+#include <shared_mutex>
+#else
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include <atomic>
+#endif
+
+#define MetricsTagMaxCount 10
 
 struct Metrics
 {
@@ -80,8 +87,6 @@ typedef std::unordered_map<MetricsKey, Metrics*, MetricsKeyHash> MetricsMap;
 
 
 // 测量工具 生成指标
-// 为了效率 不检查Tag中特殊字符的存在 如 空格 ' " , { } \0
-// 需要外部使用者自己防范，否则会出现格式错误，尤其是空格
 class Measure
 {
 public:
@@ -110,15 +115,29 @@ public:
 	Metrics* Max(int64_t v);
 
 	// 数据直接转化成快照数据
-	std::string Snapshot(int64_t v, SnapshotType type);
+	// metricsprefix指标名前缀
+	// tags额外添加的标签
+	std::string Snapshot(int64_t v, SnapshotType type, const std::string& metricsprefix ="", const std::map<std::string, std::string>& tags = std::map<std::string, std::string>());
 protected:
 	friend class MetricsRecord;
+
+	// buff
 	char fix_buff[128] = { 0 };
 	char* buff = fix_buff;
 	int size = 128;
 	int curpos = 0;
 
+	// tag and value 在buff中的开始位置，结束位置根据下个开始的位置来算
+	int tag_value[MetricsTagMaxCount][2];
+	int tagcount = 0;
+
 	void Write(void const* data, int len);
+	void Write(int data);
+	void Write(int64_t data);
+	void ExtraReserve(int len);
+
+	// 获取指标的名称 tag
+	void NameTagValue(std::string& name, std::map<std::string, std::string>& tags) const;
 
 private:
 	// 禁止拷贝
@@ -133,13 +152,22 @@ public:
 	Metrics* Reg(const Measure& measure);
 
 	// 获取指标数据
+	// metricsprefix指标名前缀
 	// tags额外添加的标签
-	std::string Snapshot(Measure::SnapshotType type, const std::map<std::string, std::string>& tags = std::map<std::string, std::string>());
+	std::string Snapshot(Measure::SnapshotType type, const std::string& metricsprefix = "", const std::map<std::string, std::string>& tags = std::map<std::string, std::string>());
 
 	void SetRecord(bool b) { brecord = b; }
 
 protected:
+#if __cplusplus >= 201703L || _MSVC_LANG >= 201402L
+	std::shared_mutex mutex;
+	typedef std::shared_lock<std::shared_mutex> read_lock;
+	typedef std::unique_lock<std::shared_mutex> write_lock;
+#else
 	boost::shared_mutex mutex;
+	typedef boost::shared_lock<boost::shared_mutex> read_lock;
+	typedef boost::unique_lock<boost::shared_mutex> write_lock;
+#endif
 	MetricsMap records;
 
 	// 是否记录测试数据
