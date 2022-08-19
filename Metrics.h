@@ -1,7 +1,7 @@
 ﻿#ifndef _METRICS_H_
 #define _METRICS_H_
 
-// by yuwf qingting.water@gmail.com
+// by git@github.com:yuwf/metrics.git
 
 /* 使用案例
 
@@ -50,6 +50,7 @@ struct Metrics
 	{
 	}
 
+	void Inc() { value += 1; }
 	void Add(int64_t v) { value += v; }
 	void Set(int64_t v) { value = v; }
 	void Max(int64_t v) { if (value < v) value = v; }
