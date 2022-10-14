@@ -403,15 +403,15 @@ Measure& Measure::Tag(const std::string& name, int64_t value)
 	return *this;
 }
 
-Metrics* Measure::Reg()
+MetricsData* Measure::Reg()
 {
-	Metrics* p = g_metricsrecord.Reg(*this);
+	MetricsData* p = g_metricsrecord.Reg(*this);
 	return p;
 }
 
-Metrics* Measure::Add(int64_t v)
+MetricsData* Measure::Add(int64_t v)
 {
-	Metrics* p = g_metricsrecord.Reg(*this);
+	MetricsData* p = g_metricsrecord.Reg(*this);
 	if (p)
 	{
 		p->Add(v);
@@ -419,9 +419,9 @@ Metrics* Measure::Add(int64_t v)
 	return p;
 }
 
-Metrics* Measure::Set(int64_t v)
+MetricsData* Measure::Set(int64_t v)
 {
-	Metrics* p = g_metricsrecord.Reg(*this);
+	MetricsData* p = g_metricsrecord.Reg(*this);
 	if (p)
 	{
 		p->Set(v);
@@ -429,9 +429,9 @@ Metrics* Measure::Set(int64_t v)
 	return p;
 }
 
-Metrics* Measure::Max(int64_t v)
+MetricsData* Measure::Max(int64_t v)
 {
-	Metrics* p = g_metricsrecord.Reg(*this);
+	MetricsData* p = g_metricsrecord.Reg(*this);
 	if (p)
 	{
 		p->Max(v);
@@ -611,7 +611,7 @@ static unsigned int APHash(char *str)
 
 MetricsRecord g_metricsrecord;
 
-Metrics* MetricsRecord::Reg(const Measure& measure)
+MetricsData* MetricsRecord::Reg(const Measure& measure)
 {
 	if (!brecord)
 	{
@@ -624,7 +624,7 @@ Metrics* MetricsRecord::Reg(const Measure& measure)
 
 	// 先用共享锁 如果存在直接返回
 	{
-		read_lock lock(mutex);
+		READ_LOCK(mutex);
 		auto it = ((const MetricsMap&)records).find(key); // 显示的调用const的find
 		if (it != records.cend())
 		{
@@ -641,11 +641,11 @@ Metrics* MetricsRecord::Reg(const Measure& measure)
 	std::map<std::string, std::string> tags;
 	measure.NameTagValue(name, tags);
 
-	Metrics* p = new Metrics(name, tags);
+	MetricsData* p = new MetricsData(name, tags);
 
 	// 使用写锁
 	{
-		write_lock lock(mutex);
+		WRITE_LOCK(mutex);
 		records.insert(std::make_pair(key, p));
 	}
 	return p;
@@ -655,7 +655,7 @@ std::string MetricsRecord::Snapshot(Measure::SnapshotType type, const std::strin
 {
 	MetricsMap lastdata;
 	{
-		read_lock lock(mutex);
+		READ_LOCK(mutex);
 		lastdata = records;
 	}
 

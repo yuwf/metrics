@@ -28,27 +28,17 @@ std::string str = Measure("metricsname").Tag("tag", "max").Snapshot(10, Measure:
 #include <unordered_map>
 #include <atomic>
 
-#if __cplusplus >= 201703L || _MSVC_LANG >= 201402L
-#include <shared_mutex>
-#else
-#include <boost/thread/locks.hpp>
-#include <boost/thread/shared_mutex.hpp>
-#endif
+// 需要依赖Locker git@github.com:yuwf/locker.git
+#include "Locker.h"
 
 #define MetricsTagMaxCount 10
 
-struct Metrics
+struct MetricsData
 {
-	Metrics(const std::string& n, const std::map<std::string, std::string>& t)
+	MetricsData(const std::string& n, const std::map<std::string, std::string>& t)
 		: name(n)
 		, tags(t)
 	{}
-	Metrics(const Metrics& other)
-		: value(other.value.load())
-		, name(other.name)
-		, tags(other.tags)
-	{
-	}
 
 	void Inc() { value += 1; }
 	void Add(int64_t v) { value += v; }
@@ -75,19 +65,16 @@ struct MetricsKey
 	{
 		return hash < other.hash;
 	}
-};
-struct MetricsKeyHash
-{
-	std::size_t operator()(const MetricsKey& obj) const
+	struct Hash
 	{
-		return obj.hash;
-	}
+		std::size_t operator()(const MetricsKey& obj) const
+		{
+			return obj.hash;
+		}
+	};
 };
 
-typedef std::unordered_map<MetricsKey, Metrics*, MetricsKeyHash> MetricsMap;
-
-
-// 测量工具 生成指标
+// 指标定位工具，获取指标数据指针或者生成指标快照
 class Measure
 {
 public:
@@ -108,12 +95,12 @@ public:
 	Measure& Tag(const std::string& name, int64_t value);
 
 	// 获取指标对象
-	Metrics* Reg();
+	MetricsData* Reg();
 
 	// 直接操作指标数据
-	Metrics* Add(int64_t v);
-	Metrics* Set(int64_t v);
-	Metrics* Max(int64_t v);
+	MetricsData* Add(int64_t v);
+	MetricsData* Set(int64_t v);
+	MetricsData* Max(int64_t v);
 
 	// 数据直接转化成快照数据
 	// metricsprefix指标名前缀
@@ -150,7 +137,7 @@ class MetricsRecord
 {
 public:
 	// 注册指标 返回指标指针
-	Metrics* Reg(const Measure& measure);
+	MetricsData* Reg(const Measure& measure);
 
 	// 获取指标数据
 	// metricsprefix指标名前缀
@@ -160,15 +147,8 @@ public:
 	void SetRecord(bool b) { brecord = b; }
 
 protected:
-#if __cplusplus >= 201703L || _MSVC_LANG >= 201402L
-	std::shared_mutex mutex;
-	typedef std::shared_lock<std::shared_mutex> read_lock;
-	typedef std::unique_lock<std::shared_mutex> write_lock;
-#else
-	boost::shared_mutex mutex;
-	typedef boost::shared_lock<boost::shared_mutex> read_lock;
-	typedef boost::unique_lock<boost::shared_mutex> write_lock;
-#endif
+	typedef std::unordered_map<MetricsKey, MetricsData*, MetricsKey::Hash> MetricsMap;
+	shared_mutex mutex;
 	MetricsMap records;
 
 	// 是否记录测试数据
