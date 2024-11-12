@@ -27,6 +27,7 @@ std::string str = Measure("metricsname").Tag("tag", "max").Snapshot(10, Measure:
 #include <map>
 #include <unordered_map>
 #include <atomic>
+#include <sstream>
 
 // 需要依赖Locker git@github.com:yuwf/locker.git
 #include "Locker.h"
@@ -98,14 +99,14 @@ public:
 	MetricsData* Reg();
 
 	// 直接操作指标数据
-	MetricsData* Add(int64_t v);
-	MetricsData* Set(int64_t v);
-	MetricsData* Max(int64_t v);
+	void Add(int64_t v);
+	void Set(int64_t v);
+	void Max(int64_t v);
 
 	// 数据直接转化成快照数据
 	// metricsprefix指标名前缀
 	// tags额外添加的标签
-	std::string Snapshot(int64_t v, SnapshotType type, const std::string& metricsprefix ="", const std::map<std::string, std::string>& tags = std::map<std::string, std::string>());
+	std::string Snapshot(int64_t v, SnapshotType type, const std::string& metricsprefix = "", const std::map<std::string, std::string>& tags = std::map<std::string, std::string>());
 protected:
 	friend class MetricsRecord;
 

@@ -297,6 +297,10 @@ Measure& Measure::Tag(const char* name, const char* value)
 	{
 		return *this;
 	}
+	if (name == NULL || name[0] == '\0' || value == NULL || value[0] == '\0')
+	{
+		return *this;
+	}
 	tag_value[tagcount][0] = curpos;
 	Write(name, strlen(name));
 	tag_value[tagcount][1] = curpos;
@@ -308,6 +312,10 @@ Measure& Measure::Tag(const char* name, const char* value)
 Measure& Measure::Tag(const char* name, const std::string& value)
 {
 	if (tagcount >= MetricsTagMaxCount)
+	{
+		return *this;
+	}
+	if (name == NULL || name[0] == '\0' || value.empty())
 	{
 		return *this;
 	}
@@ -325,6 +333,10 @@ Measure& Measure::Tag(const char* name, int value)
 	{
 		return *this;
 	}
+	if (name == NULL || name[0] == '\0')
+	{
+		return *this;
+	}
 	tag_value[tagcount][0] = curpos;
 	Write(name, strlen(name));
 	tag_value[tagcount][1] = curpos;
@@ -336,6 +348,10 @@ Measure& Measure::Tag(const char* name, int value)
 Measure& Measure::Tag(const char* name, int64_t value)
 {
 	if (tagcount >= MetricsTagMaxCount)
+	{
+		return *this;
+	}
+	if (name == NULL || name[0] == '\0')
 	{
 		return *this;
 	}
@@ -353,6 +369,10 @@ Measure& Measure::Tag(const std::string& name, const char* value)
 	{
 		return *this;
 	}
+	if (name.empty() || value == NULL || value[0] == '\0')
+	{
+		return *this;
+	}
 	tag_value[tagcount][0] = curpos;
 	Write(name.data(), name.length());
 	tag_value[tagcount][1] = curpos;
@@ -364,6 +384,10 @@ Measure& Measure::Tag(const std::string& name, const char* value)
 Measure& Measure::Tag(const std::string& name, const std::string& value)
 {
 	if (tagcount >= MetricsTagMaxCount)
+	{
+		return *this;
+	}
+	if (name.empty() || value.empty())
 	{
 		return *this;
 	}
@@ -381,6 +405,10 @@ Measure& Measure::Tag(const std::string& name, int value)
 	{
 		return *this;
 	}
+	if (name.empty())
+	{
+		return *this;
+	}
 	tag_value[tagcount][0] = curpos;
 	Write(name.data(), name.length());
 	tag_value[tagcount][1] = curpos;
@@ -392,6 +420,10 @@ Measure& Measure::Tag(const std::string& name, int value)
 Measure& Measure::Tag(const std::string& name, int64_t value)
 {
 	if (tagcount >= MetricsTagMaxCount)
+	{
+		return *this;
+	}
+	if (name.empty())
 	{
 		return *this;
 	}
@@ -409,34 +441,31 @@ MetricsData* Measure::Reg()
 	return p;
 }
 
-MetricsData* Measure::Add(int64_t v)
+void Measure::Add(int64_t v)
 {
 	MetricsData* p = g_metricsrecord.Reg(*this);
 	if (p)
 	{
 		p->Add(v);
 	}
-	return p;
 }
 
-MetricsData* Measure::Set(int64_t v)
+void Measure::Set(int64_t v)
 {
 	MetricsData* p = g_metricsrecord.Reg(*this);
 	if (p)
 	{
 		p->Set(v);
 	}
-	return p;
 }
 
-MetricsData* Measure::Max(int64_t v)
+void Measure::Max(int64_t v)
 {
 	MetricsData* p = g_metricsrecord.Reg(*this);
 	if (p)
 	{
 		p->Max(v);
 	}
-	return p;
 }
 
 std::string Measure::Snapshot(int64_t v, SnapshotType type, const std::string& metricsprefix, const std::map<std::string, std::string>& tags)
@@ -503,11 +532,6 @@ std::string Measure::Snapshot(int64_t v, SnapshotType type, const std::string& m
 
 void Measure::Write(void const* data, int len)
 {
-	if (data == NULL || len <= 0)
-	{
-		return;
-	}
-	
 	ExtraReserve(len);
 	memcpy(buff + curpos, data, len);
 	curpos += len;
@@ -659,7 +683,7 @@ std::string MetricsRecord::Snapshot(Measure::SnapshotType type, const std::strin
 		lastdata = records;
 	}
 
- 	std::ostringstream ss;
+	std::ostringstream ss;
 	if (type == Measure::Json)
 	{
 		ss << "[";
